@@ -68,7 +68,6 @@ class CreateGroupSerializer(serializers.ModelSerializer):
 
 class MiniLessonSerializer(serializers.ModelSerializer):
     """Список названий уроков для списка курсов."""
-
     class Meta:
         model = Lesson
         fields = (
@@ -87,6 +86,8 @@ class CourseSerializer(serializers.ModelSerializer):
 
     def get_lessons_count(self, obj):
         """Количество уроков в курсе."""
+        count = Lesson.objects.filter(product_id=obj.id).count()
+        return count
         # TODO Доп. задание
 
     def get_students_count(self, obj):
@@ -122,3 +123,9 @@ class CreateCourseSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Course
+        fields = (
+            'title',
+            'author',
+            'start_date',
+            'price',
+        )

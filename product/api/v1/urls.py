@@ -1,4 +1,4 @@
-from django.urls import include, path
+from django.urls import include, path, re_path
 from drf_spectacular.views import (SpectacularAPIView, SpectacularRedocView,
                                    SpectacularSwaggerView)
 from rest_framework.routers import DefaultRouter
@@ -19,7 +19,7 @@ v1_router.register(
 urlpatterns = [
     path("", include(v1_router.urls)),
     path("auth/", include('djoser.urls')),
-    path("auth/", include('djoser.urls.authtoken')),
+    re_path(r'^auth/', include('djoser.urls.authtoken')),
     # Создание нового пользователя api/v1/auth/users/
     # Авторизация пользователя     api/v1/auth/token/login/
 ]

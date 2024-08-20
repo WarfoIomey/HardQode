@@ -8,9 +8,14 @@ def make_payment(request):
 
 
 class IsStudentOrIsAdmin(BasePermission):
-    def has_permission(self, request, view):
-        # TODO
-        pass
+    def has_permission(self, request, view, **kwargs):
+        if request.method in SAFE_METHODS:
+            if Subscription.objects.filter(user_id=request.user.id, courses_id=request.resolver_match.kwargs['course_id']).exists():
+                return True
+            else:
+                return False
+        else:
+            return False
 
     def has_object_permission(self, request, view, obj):
         # TODO

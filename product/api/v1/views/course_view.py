@@ -11,8 +11,8 @@ from api.v1.serializers.course_serializer import (CourseSerializer,
                                                   GroupSerializer,
                                                   LessonSerializer)
 from api.v1.serializers.user_serializer import SubscriptionSerializer
-from courses.models import Course
-from users.models import Subscription
+from courses.models import Course, Lesson
+from users.models import Subscription, CustomUser, Balance
 
 
 class LessonViewSet(viewsets.ModelViewSet):
@@ -30,8 +30,8 @@ class LessonViewSet(viewsets.ModelViewSet):
         serializer.save(course=course)
 
     def get_queryset(self):
-        course = get_object_or_404(Course, id=self.kwargs.get('course_id'))
-        return course.lessons.all()
+        queryset = Lesson.objects.filter(product_id=self.kwargs.get('course_id'))
+        return queryset
 
 
 class GroupViewSet(viewsets.ModelViewSet):
@@ -55,8 +55,14 @@ class GroupViewSet(viewsets.ModelViewSet):
 
 class CourseViewSet(viewsets.ModelViewSet):
     """Курсы """
-
-    queryset = Course.objects.all()
+    def get_queryset(self):
+        if self.request.user.is_authenticated:
+            list_course = Subscription.objects.filter(user_id=self.request.user.id).values('courses_id')
+            queryset = Course.objects.exclude(id__in=list_course)
+            return queryset
+        else:
+            queryset = Course.objects.all()
+            return queryset
     permission_classes = (ReadOnlyOrIsAdmin,)
 
     def get_serializer_class(self):
@@ -71,9 +77,23 @@ class CourseViewSet(viewsets.ModelViewSet):
     )
     def pay(self, request, pk):
         """Покупка доступа к курсу (подписка на курс)."""
-
         # TODO
-
+        if Subscription.objects.filter(user_id=request.user.id, courses_id=pk).exists():
+            data = [{
+                'message': 'Курс уже оплачен'
+            }]
+        else:
+            balance_user = Balance.objects.filter(user_id=request.user.id).values()
+            price_course = Course.objects.filter(id=pk).values()
+            if balance_user[0]['score'] >= price_course[0]['price']:
+                Subscription(user_id=request.user.id, courses_id=pk).save()
+                new_balance = balance_user[0]['score'] - price_course[0]['price']
+                Balance.objects.filter(user_id=request.user.id).update(score=new_balance)
+                data = Subscription.objects.filter(user_id=request.user.id, courses_id=pk).values()
+            else:
+                data = [{
+                    'message': 'На вашем балансе недостаточно средств'
+                }]
         return Response(
             data=data,
             status=status.HTTP_201_CREATED
